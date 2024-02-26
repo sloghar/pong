@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pong</title>
+    <style>
+        *, *::before, *::after{
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            color: #fff;
+        }
+
+        body{
+            background-color: #000;
+            display: grid;
+            place-content: center;
+            min-height: 100vh;
+        }
+
+        .header-title{
+            text-align: center;
+            font-size: 5rem;
+        }
+    
+        .canvas{
+            border: 1px solid #fff;   
+        }
+
+        .instructions{
+            margin-top: 24px;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <h1 class="header-title">PONG</h1>
+    </header>
+    <main class="main">
+        <canvas class="canvas"></canvas>
+    </main>
+    <section class="instructions">
+        <p>PLAYER 1 BUTTONS : W and S</p>
+        <p>PLAYER 2 BUTTONS : ARROW UP and ARROW DOWN</p>
+        <p>PAUSE : SPACE BAR</p>
+        <p>PLAY AGAIN AFTER WINNING : SPACE BAR</p>
+    </section>
+    <script>
+        const canvas = document.querySelector('.canvas')
+        const ctx = canvas.getContext('2d')
+
+        const BOARD_WIDTH = canvas.width = 600
+        const BOARD_HEIGHT = canvas.height = 300
+        const POINTS_TO_WIN = 10
+        const PADDLE_WIDTH = 20
+        const PADDLE_HEIGHT = 60
+        const PADDLE_SENSITIVITY = 4
+        const BALL_SENSITIVITY = 5
+
+        let pause = false
+        const winner = [false, 0]
+
+        const ball = {
+            radius : 6,
+            x : BOARD_WIDTH / 2,
+            y : BOARD_HEIGHT / 2,
+            dx : BALL_SENSITIVITY,
+            dy : BALL_SENSITIVITY
+        }
+
+        const paddle1 = {
+            width: PADDLE_WIDTH,
+            height: PADDLE_HEIGHT,
+            x: 20,
+            y: (BOARD_HEIGHT / 2) - (PADDLE_HEIGHT / 2),
+            dy : PADDLE_SENSITIVITY,
+            up: false,
+            down : false,
+            points : 0
+        }
+
+        const paddle2 = {
+            width: PADDLE_WIDTH,
+            height: PADDLE_HEIGHT,
+            x: BOARD_WIDTH - PADDLE_WIDTH -20,
+            y: (BOARD_HEIGHT / 2) - (PADDLE_HEIGHT / 2),
+            dy : PADDLE_SENSITIVITY,
+            up: false,
+            down : false,
+            points : 0
+        }
+
+        function initEvents () {
+            document.addEventListener('keyup', (event) => {
+                if (event.key === 'ArrowUp' || event.key === 'Up') {
+                    paddle2.up = false
+                } else if (event.key === 'ArrowDown' || event.key === 'Down') {
+                    paddle2.down = false
+                }
+            })
+
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'ArrowUp' || event.key === 'Up') {
+                    paddle2.up = true
+                } else if (event.key === 'ArrowDown' || event.key === 'Down') {
+                    paddle2.down = true
+                }
+            })
+
+            document.addEventListener('keyup', (event) => {
+                if (event.key === 'w' || event.key === 'W') {
+                    paddle1.up = false
+                } else if (event.key === 's' || event.key === 'S') {
+                    paddle1.down = false
+                }
+            })
+
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'w' || event.key === 'W') {
+                    paddle1.up = true
+                } else if (event.key === 's' || event.key === 'S') {
+                    paddle1.down = true
+                }
+            })
+
+            document.addEventListener('keyup', (event) => {
+                if (event.key === ' ') {
+                    pause = !pause
+
+                    if(winner[0]){
+                        winner[0] = false
+                        paddle1.y = (BOARD_HEIGHT / 2) - (PADDLE_HEIGHT / 2)
+                        paddle2.y = (BOARD_HEIGHT / 2) - (PADDLE_HEIGHT / 2)
+                    }
+                } 
+            })
+
+            
+        }
+
+        function ballMovement () {
+
+            if (ball.y + ball.dy + ball.radius > BOARD_HEIGHT) {
+                ball.dy = - ball.dy
+            } 
+            
+            if (ball.y + ball.dy - ball.radius < 0) {
+                ball.dy = - ball.dy
+            }
+
+            if (ball.x + ball.dx + ball.radius > BOARD_WIDTH) {
+                ball.dx = - ball.dx
+                ball.x = BOARD_WIDTH / 2
+                ball.y = BOARD_HEIGHT / 2
+                paddle1.points++
+                if(paddle1.points === POINTS_TO_WIN){
+                    pause = true
+                    winner[0] = true
+                    winner[1] = 1
+                }
+            }
+
+            if (ball.x + ball.dx - ball.radius < 0) {
+                ball.dx = - ball.dx
+                ball.x = BOARD_WIDTH / 2
+                ball.y = BOARD_HEIGHT / 2
+                paddle2.points++
+                if(paddle2.points === POINTS_TO_WIN){
+                    pause = true
+                    winner[0] = true
+                    winner[1] = 2
+                }
+            }
+
+            const isTouchingPaddle1 = ball.y >= paddle1.y  &&
+                                    ball.y <= paddle1.y + paddle1.height &&
+                                    ball.x - ball.radius <= paddle1.x +paddle1.width
+
+            const isTouchingPaddle2 = ball.y >= paddle2.y  &&
+                                    ball.y <= paddle2.y + paddle2.height &&
+                                    ball.x + ball.radius >= paddle2.x 
+
+            if(isTouchingPaddle1){
+                ball.dx = - ball.dx
+            }
+
+            if(isTouchingPaddle2){
+                ball.dx = - ball.dx
+            }
+
+            ball.y += ball.dy
+            ball.x += ball.dx
+        }
+
+        function drawBall () {
+            ctx.beginPath()
+            ctx.arc(ball.x, ball.y, ball.radius, 0, 2 * Math.PI)
+            ctx.fillStyle = '#fff'
+            ctx.fill()
+        }
+
+        function paddle1Movement () {
+            if (paddle1.up && paddle1.y > 0) {
+                paddle1.y -= paddle1.dy
+            } else if(paddle1.down && paddle1.y < BOARD_HEIGHT - PADDLE_HEIGHT) {
+                paddle1.y += paddle1.dy
+            }
+        }
+
+        function paddle2Movement () {
+            if (paddle2.up && paddle2.y > 0) {
+                paddle2.y -= paddle2.dy
+            } else if(paddle2.down && paddle2.y < BOARD_HEIGHT - PADDLE_HEIGHT) {
+                paddle2.y += paddle2.dy
+            }
+        }
+
+        function drawPaddle1 () {
+            ctx.fillStyle = '#fff'
+            ctx.fillRect(paddle1.x, paddle1.y, paddle1.width, paddle1.height)
+        }
+
+        function drawPaddle2 () {
+            ctx.fillStyle = '#fff'
+            ctx.fillRect(paddle2.x, paddle2.y, paddle2.width, paddle2.height)
+        }
+
+        function drawPoints () {
+            ctx.font = '50px Arial'
+            ctx.fillText(`${paddle1.points}`, BOARD_WIDTH / 2 - 50, 50)
+            ctx.fillText(`${paddle2.points}`, BOARD_WIDTH / 2 + 25, 50)
+        }
+
+        function animate () {
+            ctx.clearRect(0, 0, BOARD_WIDTH, BOARD_HEIGHT)
+
+            if(!pause){
+                drawPoints()
+                ballMovement()
+                drawBall()
+                paddle1Movement()
+                paddle2Movement()
+                drawPaddle1()
+                drawPaddle2()
+            } else {
+                ctx.font = '50px Arial'
+            
+                if(winner[0]){
+                    ctx.fillText(`PLAYER ${winner[1]} WON`, BOARD_WIDTH / 2 - 185, BOARD_HEIGHT / 2 + 17)
+                    paddle1.points = paddle2.points = 0
+                } else {
+                    ctx.fillText('PAUSED', BOARD_WIDTH / 2 - 90, BOARD_HEIGHT / 2 + 17)
+                }
+            }
+            
+            requestAnimationFrame(animate)   
+        }
+
+        animate()
+        initEvents()
+
+    </script>
+</body>
+</html>
